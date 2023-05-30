@@ -11,6 +11,7 @@
 
 namespace FOS\CommentBundle\Tests\Entity;
 
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -48,23 +49,16 @@ class CommentTest extends TestCase
         $this->assertSame(array_merge($ancestors, [$parentId]), $comment->getAncestors());
     }
 
-    /**
-     * @expectedException \InvalidArgumentException
-     */
     public function testSetParentNotPersisted()
     {
+        self::expectException(InvalidArgumentException::class);
+
         $parent = $this->getMockBuilder('FOS\CommentBundle\Entity\Comment')->getMock();
         $parent->expects($this->any())
             ->method('getId')
             ->will($this->returnValue(null));
 
         $comment = new Comment();
-        $hasException = false;
-        try {
-            $comment->setParent($parent);
-        } catch (\Exception $exception) {
-            $hasException = true;
-        }
-        $this->assertTrue($hasException);
+        $comment->setParent($parent);
     }
 }

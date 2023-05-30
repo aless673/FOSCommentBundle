@@ -30,12 +30,9 @@ abstract class ThreadManager implements ThreadManagerInterface
      */
     protected $dispatcher;
 
-    /**
-     * @param EventDispatcherInterface $dispatcher
-     */
     public function __construct(EventDispatcherInterface $dispatcher)
     {
-        $this->dispatcher = $dispatcher;
+        $this->dispatcher = class_exists(LegacyEventDispatcherProxy::class) ? LegacyEventDispatcherProxy::decorate($dispatcher) : $dispatcher;
     }
 
     /**
@@ -72,8 +69,6 @@ abstract class ThreadManager implements ThreadManagerInterface
 
     /**
      * Persists a thread.
-     *
-     * @param ThreadInterface $thread
      */
     public function saveThread(ThreadInterface $thread)
     {
@@ -87,20 +82,22 @@ abstract class ThreadManager implements ThreadManagerInterface
     }
 
     /**
-     * @param Event  $event
      * @param string $eventName
      */
     protected function dispatch(Event $event, $eventName)
     {
-        $this->dispatcher->dispatch($event, $eventName);
+        // LegacyEventDispatcherProxy exists in Symfony >= 4.3
+        if (class_exists(LegacyEventDispatcherProxy::class)) {
+            // New Symfony 4.3 EventDispatcher signature
+            $this->dispatcher->dispatch($event, $eventName);
+        } else {
+            // Old EventDispatcher signature
+            $this->dispatcher->dispatch($eventName, $event);
+        }
     }
 
     /**
      * Performs the persistence of the Thread.
-     *
-     * @abstract
-     *
-     * @param ThreadInterface $thread
      */
     abstract protected function doSaveThread(ThreadInterface $thread);
 }

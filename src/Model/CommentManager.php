@@ -47,7 +47,7 @@ abstract class CommentManager implements CommentManagerInterface
      */
     public function __construct(EventDispatcherInterface $dispatcher, SortingFactory $factory)
     {
-        $this->dispatcher = $dispatcher;
+        $this->dispatcher = class_exists(LegacyEventDispatcherProxy::class) ? LegacyEventDispatcherProxy::decorate($dispatcher) : $dispatcher;
         $this->sortingFactory = $factory;
     }
 
@@ -144,18 +144,22 @@ abstract class CommentManager implements CommentManagerInterface
     }
 
     /**
-     * @param Event  $event
      * @param string $eventName
      */
     protected function dispatch(Event $event, $eventName)
     {
-        $this->dispatcher->dispatch($event, $eventName);
+        // LegacyEventDispatcherProxy exists in Symfony >= 4.3
+        if (class_exists(LegacyEventDispatcherProxy::class)) {
+            // New Symfony 4.3 EventDispatcher signature
+            $this->dispatcher->dispatch($event, $eventName);
+        } else {
+            // Old EventDispatcher signature
+            $this->dispatcher->dispatch($eventName, $event);
+        }
     }
 
     /**
      * Performs the persistence of a comment.
-     *
-     * @param CommentInterface $comment
      */
     abstract protected function doSaveComment(CommentInterface $comment);
 }

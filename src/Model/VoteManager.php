@@ -32,18 +32,16 @@ abstract class VoteManager implements VoteManagerInterface
 
     /**
      * Constructor.
-     *
-     * @param \Symfony\Component\EventDispatcher\EventDispatcherInterface $dispatcher
      */
     public function __construct(EventDispatcherInterface $dispatcher)
     {
-        $this->dispatcher = $dispatcher;
+        $this->dispatcher = class_exists(LegacyEventDispatcherProxy::class) ? LegacyEventDispatcherProxy::decorate($dispatcher) : $dispatcher;
     }
 
     /**
      * Finds a vote by id.
      *
-     * @param  $id
+     * @param $id
      *
      * @return VoteInterface
      */
@@ -54,8 +52,6 @@ abstract class VoteManager implements VoteManagerInterface
 
     /**
      * Creates a Vote object.
-     *
-     * @param VotableCommentInterface $comment
      *
      * @return VoteInterface
      */
@@ -71,9 +67,6 @@ abstract class VoteManager implements VoteManagerInterface
         return $vote;
     }
 
-    /**
-     * @param VoteInterface $vote
-     */
     public function saveVote(VoteInterface $vote)
     {
         if (null === $vote->getComment()) {
@@ -94,20 +87,22 @@ abstract class VoteManager implements VoteManagerInterface
     }
 
     /**
-     * @param Event  $event
      * @param string $eventName
      */
     protected function dispatch(Event $event, $eventName)
     {
-        $this->dispatcher->dispatch($event, $eventName);
+        // LegacyEventDispatcherProxy exists in Symfony >= 4.3
+        if (class_exists(LegacyEventDispatcherProxy::class)) {
+            // New Symfony 4.3 EventDispatcher signature
+            $this->dispatcher->dispatch($event, $eventName);
+        } else {
+            // Old EventDispatcher signature
+            $this->dispatcher->dispatch($eventName, $event);
+        }
     }
 
     /**
      * Performs the persistence of the Vote.
-     *
-     * @abstract
-     *
-     * @param VoteInterface $vote
      */
     abstract protected function doSaveVote(VoteInterface $vote);
 }

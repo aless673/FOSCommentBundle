@@ -12,6 +12,7 @@
 namespace FOS\CommentBundle\Tests\Entity;
 
 use FOS\CommentBundle\Entity\CommentManager;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -71,24 +72,17 @@ class CommentManagerTest extends TestCase
         $commentManager->findCommentById($commentId);
     }
 
-    /**
-     * @expectedException \InvalidArgumentException
-     */
     public function testSaveCommentNoThread()
     {
+        self::expectException(InvalidArgumentException::class);
+
         $comment = $this->getMockBuilder('FOS\CommentBundle\Model\CommentInterface')->getMock();
         $comment->expects($this->once())
             ->method('getThread')
             ->will($this->returnValue(null));
 
         $commentManager = new CommentManager($this->dispatcher, $this->sortingFactory, $this->em, $this->class);
-        $hasException = false;
-        try {
-            $commentManager->saveComment($comment);
-        } catch (\Exception $exception) {
-            $hasException = true;
-        }
-        $this->assertTrue($hasException);
+        $commentManager->saveComment($comment);
     }
 
     public function testSaveComment()

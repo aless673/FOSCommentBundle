@@ -25,7 +25,6 @@ class ApiTest extends WebTestCase
             'test_case' => 'Basic',
             'root_config' => 'config.yml',
             'debug' => false,
-            'environment' => 'test'
         ], [
             'PHP_AUTH_USER' => 'user',
             'PHP_AUTH_PW' => 'user',
@@ -41,7 +40,6 @@ class ApiTest extends WebTestCase
      */
     public function testGetThread404()
     {
-        $this->markTestSkipped();
         $this->client->insulate(true);
 
         $this->client->request('GET', '/comment_api/threads/non-existant.json');
@@ -55,7 +53,6 @@ class ApiTest extends WebTestCase
      */
     public function testGetThreads404()
     {
-        $this->markTestSkipped();
         $this->client->insulate(true);
 
         $this->client->request('GET', '/comment_api/threads');
@@ -72,7 +69,6 @@ class ApiTest extends WebTestCase
      */
     public function testGetThreadFormAndSubmit()
     {
-        $this->markTestSkipped();
         $crawler = $this->client->request('GET', '/comment_api/threads/new.html');
 
         $this->assertSame(
@@ -104,7 +100,8 @@ class ApiTest extends WebTestCase
     public function testGetThread($id)
     {
         $this->client->request('GET', "/comment_api/threads/{$id}.json");
-        $this->assertContains($id, (string) $this->client->getResponse()->getContent());
+
+        $this->assertStringContainsString($id, (string) $this->client->getResponse()->getContent());
     }
 
     /**
@@ -145,7 +142,7 @@ class ApiTest extends WebTestCase
         $this->assertRedirect($this->client->getResponse(), "/comment_api/threads/{$id}/comments/1");
         $crawler = $this->client->followRedirect();
 
-        $this->assertContains('Test Comment', $crawler->filter('.fos_comment_comment_body')->text(null, false));
+        $this->assertStringContainsString('Test Comment', $crawler->filter('.fos_comment_comment_body')->text(null, false));
 
         return $id;
     }
@@ -181,7 +178,7 @@ class ApiTest extends WebTestCase
         $this->assertRedirect($this->client->getResponse(), "/comment_api/threads/{$id}/comments/2");
         $crawler = $this->client->followRedirect();
 
-        $this->assertContains('Test Reply Comment', $crawler->filter('.fos_comment_comment_body')->text(null, false));
+        $this->assertStringContainsString('Test Reply Comment', $crawler->filter('.fos_comment_comment_body')->text(null, false));
 
         return $id;
     }
@@ -199,7 +196,7 @@ class ApiTest extends WebTestCase
         $crawler = $this->client->request('GET', "/comment_api/threads/{$id}/comments.html");
 
         $this->assertCount(2, $crawler->filter('.fos_comment_comment_body'));
-        $this->assertContains('Test Reply Comment', $crawler->filter('.fos_comment_comment_show .fos_comment_comment_depth_1 .fos_comment_comment_body')->first()->text(null, false));
+        $this->assertStringContainsString('Test Reply Comment', $crawler->filter('.fos_comment_comment_show .fos_comment_comment_depth_1 .fos_comment_comment_body')->first()->text(null, false));
     }
 
     /**
@@ -215,8 +212,8 @@ class ApiTest extends WebTestCase
         $crawler = $this->client->request('GET', "/comment_api/threads/{$id}/comments.html?displayDepth=0");
 
         $this->assertCount(1, $crawler->filter('.fos_comment_comment_body'));
-        $this->assertContains('Test Comment', $crawler->filter('.fos_comment_comment_body')->first()->text(null, false));
-        $this->assertContains('Test Comment', $crawler->filter('.fos_comment_comment_body')->last()->text(null, false));
+        $this->assertStringContainsString('Test Comment', $crawler->filter('.fos_comment_comment_body')->first()->text(null, false));
+        $this->assertStringContainsString('Test Comment', $crawler->filter('.fos_comment_comment_body')->last()->text(null, false));
     }
 
     /**
@@ -232,8 +229,8 @@ class ApiTest extends WebTestCase
         $crawler = $this->client->request('GET', "/comment_api/threads/{$id}/comments.html?view=flat");
 
         $this->assertCount(2, $crawler->filter('.fos_comment_comment_body'));
-        $this->assertContains('Test Comment', $crawler->filter('.fos_comment_comment_show.fos_comment_comment_depth_0 .fos_comment_comment_body')->first()->text(null, false));
-        $this->assertContains('Test Reply Comment', $crawler->filter('.fos_comment_comment_show.fos_comment_comment_depth_0 .fos_comment_comment_body')->last()->text(null, false));
+        $this->assertStringContainsString('Test Comment', $crawler->filter('.fos_comment_comment_show.fos_comment_comment_depth_0 .fos_comment_comment_body')->first()->text(null, false));
+        $this->assertStringContainsString('Test Reply Comment', $crawler->filter('.fos_comment_comment_show.fos_comment_comment_depth_0 .fos_comment_comment_body')->last()->text(null, false));
     }
 
     /**
@@ -251,8 +248,8 @@ class ApiTest extends WebTestCase
 
         $this->assertCount(2, $crawler->filter('.fos_comment_comment_body'));
         $this->assertCount(2, $crawler2->filter('.fos_comment_comment_body'));
-        $this->assertContains('Test Reply Comment', $crawler->filter('.fos_comment_comment_show.fos_comment_comment_depth_0 .fos_comment_comment_body')->first()->text(null, false));
-        $this->assertContains('Test Comment', $crawler->filter('.fos_comment_comment_show.fos_comment_comment_depth_0 .fos_comment_comment_body')->last()->text(null, false));
+        $this->assertStringContainsString('Test Reply Comment', $crawler->filter('.fos_comment_comment_show.fos_comment_comment_depth_0 .fos_comment_comment_body')->first()->text(null, false));
+        $this->assertStringContainsString('Test Comment', $crawler->filter('.fos_comment_comment_show.fos_comment_comment_depth_0 .fos_comment_comment_body')->last()->text(null, false));
 
         $this->assertSame(
             $crawler->filter('.fos_comment_comment_show.fos_comment_comment_depth_0 .fos_comment_comment_body')->first()->text(null, false),

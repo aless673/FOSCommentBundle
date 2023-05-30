@@ -11,13 +11,11 @@
 
 namespace FOS\CommentBundle\Tests\Functional;
 
-use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Component\Config\Loader\LoaderInterface;
-use Symfony\Component\Config\Resource\FileResource;
-use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpKernel\Kernel;
-use Symfony\Component\Routing\RouteCollectionBuilder;
 
+// get the autoload file
 $dir = __DIR__;
 $lastDir = null;
 while ($dir !== $lastDir) {
@@ -40,95 +38,72 @@ while ($dir !== $lastDir) {
 
     $dir = dirname($dir);
 }
+
 class AppKernel extends Kernel
 {
-    use MicroKernelTrait;
-
-    private const CONFIG_EXTS = '.{php,xml,yaml,yml}';
     private $testCase;
     private $rootConfig;
 
-    public function __construct(
-        $environment,
-        $debug,
-        $testCase = 'Basic',
-        $rootConfig = 'config.yml"'
-    ) {
-        $root = strpos(__DIR__, '/app') !== false ? __DIR__ : __DIR__ . '/app';
-        if (!is_dir($root.'/'.$testCase)) {
+    public function __construct($testCase, $rootConfig, $environment, $debug)
+    {
+        if (!is_dir(__DIR__.'/'.$testCase)) {
             throw new \InvalidArgumentException(sprintf('The test case "%s" does not exist.', $testCase));
         }
         $this->testCase = $testCase;
-        $this->rootConfig = $root.'/'.$testCase.'/'.$rootConfig;
+
+        $fs = new Filesystem();
+        if (!$fs->isAbsolutePath($rootConfig) && !is_file($rootConfig = __DIR__.'/'.$testCase.'/'.$rootConfig)) {
+            throw new \InvalidArgumentException(sprintf('The root config "%s" does not exist.', $rootConfig));
+        }
+        $this->rootConfig = $rootConfig;
 
         parent::__construct($environment, $debug);
     }
 
-    public function registerBundles(): iterable
+    public function __sleep()
     {
-        if (!is_file($filename = $this->getRootDir().'/'.$this->testCase.'/bundles.php')) {
+        return ['testCase', 'rootConfig', 'environment', 'debug'];
+    }
+
+    public function __wakeup()
+    {
+        $this->__construct($this->testCase, $this->rootConfig, $this->getEnvironment(), $this->isDebug());
+    }
+
+    public function registerBundles()
+    {
+        if (!is_file($filename = $this->getProjectDir().'/'.$this->testCase.'/bundles.php')) {
             throw new \RuntimeException(sprintf('The bundles file "%s" does not exist.', $filename));
         }
-        $contents = require $this->getRootDir().'/'.$this->testCase.'/bundles.php';
-        foreach ($contents as $class => $envs) {
-            if ($envs[$this->environment] ?? $envs['all'] ?? false) {
-                yield new $class();
-            }
-        }
+
+        return include $filename;
     }
 
-    protected function configureRoutes(RouteCollectionBuilder $routes): void
+    public function getProjectDir()
     {
-        $confDir = $this->getProjectDir() . '/' . $this->testCase;
-        $routes->import($confDir . '/{routing}' . self::CONFIG_EXTS, '/', 'glob');
-
-      //  dd($routes);
+        return __DIR__;
     }
 
-    public function getProjectDir(): string
+    public function getCacheDir()
     {
-        $path = \dirname(__DIR__);
-        return strpos($path, '/app') ? $path : $path . '/app';
+        return sys_get_temp_dir().'/'.Kernel::VERSION.'/'.$this->testCase.'/cache/'.$this->environment;
     }
 
-    public function getRootDir(): string
+    public function getLogDir()
     {
-        $path = \dirname(__DIR__);
-        return strpos($path, '/app') ? $path : $path . '/app';
+        return sys_get_temp_dir().'/'.Kernel::VERSION.'/'.$this->testCase.'/logs';
     }
 
-    public function getCacheDir(): string
+    public function registerContainerConfiguration(LoaderInterface $loader)
     {
-        return sys_get_temp_dir().'/'.time().'/'.Kernel::VERSION.'/'.$this->testCase.'/cache/'.$this->environment;
-    }
+        $loader->load($this->rootConfig);
 
-    public function getLogDir(): string
-    {
-        return sys_get_temp_dir().'/'.time().'/'.Kernel::VERSION.'/'.$this->testCase.'/logs';
-    }
-
-    public function configureContainer(ContainerBuilder $container, LoaderInterface $loader): void
-    {
-        $container->addResource(new FileResource($this->getRootDir().'/'.$this->testCase.'/bundles.php'));
-        $container->setParameter('container.dumper.inline_class_loader', \PHP_VERSION_ID < 70400 || $this->debug);
-        $container->setParameter('container.dumper.inline_factories', true);
-        $loader->load($this->getRootDir().'/'.$this->testCase. '/config' . self::CONFIG_EXTS, 'glob');
         if (Kernel::MAJOR_VERSION >= 4 && Kernel::MINOR_VERSION >= 1) {
             $loader->load(__DIR__.'/config/twig.yml');
         }
     }
 
-    public function serialize()
-    {
-        return serialize([$this->testCase, $this->rootConfig, $this->getEnvironment(), $this->isDebug()]);
-    }
-
-    public function unserialize($str)
-    {
-        call_user_func_array([$this, '__construct'], unserialize($str));
-    }
-
-    protected function getKernelParameters(): array
+    protected function getKernelParameters()
     {
         $parameters = parent::getKernelParameters();
         $parameters['kernel.test_case'] = $this->testCase;

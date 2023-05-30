@@ -13,4 +13,4 @@ fos_comment:
 fos_rest:
     format_listener:
         rules:
-            - { path: '^/comments', priorities: ['json', 'html'], fallback_format: json }
+            - { path: '^/', priorities: ['json', 'html'], fallback_format: json }
